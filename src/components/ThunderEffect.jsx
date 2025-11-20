@@ -3,19 +3,19 @@ import { useEffect, useState } from 'react';
 function ThunderEffect() {
   const [flash, setFlash] = useState(0);
 
-  // Random thunder flashes
+  // Flash every second
   useEffect(() => {
     const flashInterval = setInterval(() => {
-      const delay = 10000 + Math.random() * 20000; // 10-30 seconds between flashes
+      // Quick flash sequence
+      setFlash(0.8);
       setTimeout(() => {
-        setFlash(1);
-        setTimeout(() => setFlash(0), 100); // Quick flash
+        setFlash(0);
         setTimeout(() => {
-          setFlash(0.7);
-          setTimeout(() => setFlash(0), 150); // Second flash
-        }, 200);
-      }, delay);
-    }, 30000); // Check every 30 seconds
+          setFlash(0.5);
+          setTimeout(() => setFlash(0), 100);
+        }, 50);
+      }, 100);
+    }, 3000);
 
     return () => clearInterval(flashInterval);
   }, []);
