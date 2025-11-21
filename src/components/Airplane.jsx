@@ -21,7 +21,7 @@ const SHARD_DIRECTIONS = [
 
 const PROJECTS = [
   {
-    title: 'Project Management Mono Repo',
+    title: 'Project Management',
     accent: '#a855f7',
     badge: '#f9fafb'
   },
@@ -31,7 +31,7 @@ const PROJECTS = [
     badge: '#f9fafb'
   },
   {
-    title: 'Lead Generation CRM Plugin',
+    title: 'Lead Generation',
     accent: '#f97316',
     badge: '#0f172a'
   },

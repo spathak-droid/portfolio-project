@@ -6,6 +6,8 @@ import Clouds2D from './components/Clouds2D'
 import Airplane from './components/Airplane'
 import './App.css'
 import ThunderEffect from './components/ThunderEffect'
+import AboutMe from './components/AboutMe'
+import profilePhoto from './assets/IMG_5444.jpg'
 
 
 function Rain({ count = 2000 }) {
@@ -124,7 +126,7 @@ function App() {
   const [hintProject, setHintProject] = useState(null)
   const [hits, setHits] = useState(0)
   const [selectedProject, setSelectedProject] = useState(null)
-  const [view, setView] = useState('home') // 'home' | 'projects'
+  const [view, setView] = useState('home') // 'home' | 'projects' | 'about'
   const [transitioning, setTransitioning] = useState(false)
   const [showMobileWarning, setShowMobileWarning] = useState(false)
   const [isMobileView, setIsMobileView] = useState(false)
@@ -132,6 +134,90 @@ function App() {
   const basePath = ((import.meta.env.BASE_URL ?? '/') === '/' ? '' : (import.meta.env.BASE_URL ?? '/').replace(/\/$/, ''))
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [showSteerHint, setShowSteerHint] = useState(true)
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false)
+  const [showResumeModal, setShowResumeModal] = useState(false)
+  const assetBase = import.meta.env.BASE_URL ?? '/'
+  const profileImageUrl = profilePhoto
+  const resumeUrl = `${assetBase}resume/resume.pdf`
+  const techLogoBase = `${assetBase}techstack-logos/`
+  const buildTechItem = (label, iconFile) => ({
+    label,
+    icon: `${techLogoBase}${iconFile ?? 'code'}.png`
+  })
+  const aboutTechStacks = [
+    {
+      title: 'Languages',
+      items: [
+        buildTechItem('JavaScript', 'javascript'),
+        buildTechItem('TypeScript', 'typescript'),
+        buildTechItem('Python', 'python'),
+        buildTechItem('Java', 'java')
+      ]
+    },
+    {
+      title: 'Frontend',
+      items: [
+        buildTechItem('React', 'react'),
+        buildTechItem('Angular', 'angular'),
+        buildTechItem('Three.js', 'threejs'),
+        buildTechItem('Next.js', 'nextjs'),
+        buildTechItem('Vite', 'Vite'),
+        buildTechItem('Tailwind CSS', 'tailwind')
+      ]
+    },
+    {
+      title: 'Backend',
+      items: [
+        buildTechItem('Node.js', 'nodejs'),
+        buildTechItem('NestJS', 'nestjs'),
+        buildTechItem('Express', 'express'),
+        buildTechItem('GraphQL', 'graphql'),
+        buildTechItem('Django', 'django'),
+        buildTechItem('MongoDB', 'mongodb')
+      ]
+    },
+    {
+      title: 'AI & Automation',
+      items: [
+        buildTechItem('OpenAI API', 'openai'),
+        buildTechItem('LangChain', 'langchain'),
+        buildTechItem('NLP.js', 'nlpjs'),
+        buildTechItem('LLM Ops'),
+        buildTechItem('RAG Pipelines')
+      ]
+    },
+    {
+      title: 'Cloud & DevOps',
+      items: [
+        buildTechItem('AWS ECS', 'aws'),
+        buildTechItem('Docker', 'docker'),
+        buildTechItem('CI/CD Pipelines', 'cicd'),
+        buildTechItem('Cloudflare R2', 'cloudfare'),
+        buildTechItem('WebSockets', 'websocket')
+      ]
+    }
+  ]
+  const aboutContactItems = [
+    {
+      label: 'Email',
+      value: 'pathaksandesh025@gmail.com',
+      href: 'mailto:pathaksandesh025@gmail.com'
+    },
+    {
+      label: 'LinkedIn',
+      value: 'linkedin.com/in/sandeshpathak',
+      href: 'https://www.linkedin.com/in/sandeshpathak'
+    },
+    {
+      label: 'GitHub',
+      value: 'github.com/spathak-droid',
+      href: 'https://github.com/spathak-droid'
+    },
+    {
+      label: 'Location',
+      value: 'Plano, TX · USA'
+    }
+  ]
 
   const handleSelectProject = project => {
     if (!project) return
@@ -167,6 +253,8 @@ function App() {
 
     if (window.location.pathname === `${basePath}/projects`) {
       setView('projects')
+    } else if (window.location.pathname === `${basePath}/about`) {
+      setView('about')
     }
 
     window.addEventListener('resize', evaluateWarning)
@@ -240,9 +328,44 @@ function App() {
     onTouchEnd: () => dispatchMobileControl(key, false)
   })
 
+  const toggleHamburger = () => {
+    setIsHamburgerOpen(prev => !prev)
+  }
+
+  const openResumeModal = () => {
+    setShowResumeModal(true)
+  }
+
+  const closeResumeModal = () => {
+    setShowResumeModal(false)
+  }
+
+  const handleNavigate = target => {
+    setIsHamburgerOpen(false)
+    if (target !== 'projects') {
+      setSelectedProject(null)
+      setTransitioning(false)
+    }
+    setView(target)
+
+    if (typeof window !== 'undefined' && window.history) {
+      const path =
+        target === 'projects'
+          ? `${basePath}/projects`
+          : target === 'about'
+          ? `${basePath}/about`
+          : basePath || '/'
+      if (window.location.pathname !== path) {
+        window.history.pushState({}, '', path)
+      }
+    }
+  }
+
+  const isAboutView = view === 'about'
+
   return (
     <div className="app">
-      {(!sceneReady || loadingProgress < 100) && (
+      {(!sceneReady || loadingProgress < 100) && !isAboutView && (
         <div className="scene-loading-overlay">
           <div className="scene-loading-card">
             <div className="scene-loading-text">
@@ -261,7 +384,7 @@ function App() {
           </div>
         </div>
       )}
-      {showMobileWarning && (
+      {showMobileWarning && !isAboutView && (
         <div className="mobile-warning-overlay">
           <div className="mobile-warning-card">
             <h2>Best experienced on desktop</h2>
@@ -276,10 +399,51 @@ function App() {
           </div>
         </div>
       )}
-      <ThunderEffect />
-      {!isMobileView && <BackgroundSound />}
-      <section className="hero">
-        {sceneReady && view === 'home' && (
+      {!isAboutView && <ThunderEffect />}
+      {!isMobileView && !isAboutView && <BackgroundSound />}
+      <header className="hamburger-header">
+        <button
+          type="button"
+          className={`hamburger-button${isHamburgerOpen ? ' open' : ''}`}
+          aria-label="Open navigation menu"
+          aria-expanded={isHamburgerOpen}
+          onClick={toggleHamburger}
+        >
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+          <span className="hamburger-line" />
+        </button>
+        <div className={`hamburger-menu${isHamburgerOpen ? ' open' : ''}`} aria-hidden={!isHamburgerOpen}>
+          <button
+            type="button"
+            className={`hamburger-menu-item${view === 'projects' ? ' active' : ''}`}
+            onClick={() => handleNavigate('projects')}
+          >
+            My Projects
+          </button>
+          <button
+            type="button"
+            className={`hamburger-menu-item${isAboutView ? ' active' : ''}`}
+            onClick={() => handleNavigate('about')}
+          >
+            About Me
+          </button>
+        </div>
+      </header>
+      {isAboutView ? (
+        <section className="about-wrapper">
+          <AboutMe
+            profileImage={profileImageUrl}
+            resumeUrl={resumeUrl}
+            techStacks={aboutTechStacks}
+            contactItems={aboutContactItems}
+            onViewResume={openResumeModal}
+            onBack={() => handleNavigate('home')}
+          />
+        </section>
+      ) : (
+        <section className="hero">
+          {sceneReady && view === 'home' && (
           <div className="hero-content hero-home">
             <h1>Welcome to my portfolio</h1>
             <p className="subtitle">An interactive flight through my work.</p>
@@ -627,8 +791,9 @@ function App() {
           )}
         </div>
       </section>
+      )}
 
-      {sceneReady && (
+      {sceneReady && !isAboutView && (
         <>
           <div className="hit-counter-overlay">
             {hits < 3 ? (
@@ -684,7 +849,25 @@ function App() {
       )}
 
       {view === 'home' ? null : null}
-      {transitioning && <div className="page-fade" />}
+      {transitioning && !isAboutView && <div className="page-fade" />}
+      {showResumeModal && (
+        <div className="resume-modal-overlay" role="dialog" aria-modal="true" aria-label="Sandesh Pathak resume">
+          <div className="resume-modal">
+            <div className="resume-modal-header">
+              <h2>Resume</h2>
+              <button type="button" className="resume-modal-close" onClick={closeResumeModal} aria-label="Close resume">
+                ×
+              </button>
+            </div>
+            <div className="resume-modal-body">
+              <iframe title="Sandesh Pathak resume PDF" src={resumeUrl} loading="lazy" />
+              <a href={resumeUrl} target="_blank" rel="noreferrer noopener" className="resume-modal-download">
+                Open in new tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
