@@ -277,7 +277,7 @@ function App() {
         </div>
       )}
       <ThunderEffect />
-      <BackgroundSound />
+      {!isMobileView && <BackgroundSound />}
       <section className="hero">
         {sceneReady && view === 'home' && (
           <div className="hero-content hero-home">
