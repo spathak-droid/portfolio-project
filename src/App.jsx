@@ -126,6 +126,12 @@ function App() {
   const [selectedProject, setSelectedProject] = useState(null)
   const [view, setView] = useState('home') // 'home' | 'projects'
   const [transitioning, setTransitioning] = useState(false)
+  const [showMobileWarning, setShowMobileWarning] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(false)
+  const [sceneReady, setSceneReady] = useState(false)
+  const basePath = ((import.meta.env.BASE_URL ?? '/') === '/' ? '' : (import.meta.env.BASE_URL ?? '/').replace(/\/$/, ''))
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  const warningStorageKey = 'mobileWarningDismissedSession'
 
   const handleSelectProject = project => {
     if (!project) return
@@ -135,32 +141,141 @@ function App() {
     setTimeout(() => {
       setView('projects')
       setTransitioning(false)
-      if (typeof window !== 'undefined' && window.history && window.location.pathname !== '/projects') {
-        window.history.pushState({}, '', '/projects')
+      if (
+        typeof window !== 'undefined' &&
+        window.history &&
+        window.location.pathname !== `${basePath}/projects`
+      ) {
+        window.history.pushState({}, '', `${basePath}/projects`)
       }
     }, 600)
   }
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (window.location.pathname === '/projects') {
+    if (typeof window === 'undefined') return undefined
+
+    const evaluateWarning = () => {
+      const hasDismissed = window.sessionStorage?.getItem(warningStorageKey) === 'true'
+      const isSmallScreen = window.innerWidth <= 900
+      const isLikelyMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent)
+      const mobileState = isSmallScreen || isLikelyMobile
+
+      setIsMobileView(mobileState)
+
+      if (!hasDismissed && mobileState) {
+        setShowMobileWarning(true)
+      } else if (hasDismissed || !mobileState) {
+        setShowMobileWarning(false)
+      }
+    }
+
+    evaluateWarning()
+
+    if (window.location.pathname === `${basePath}/projects`) {
       setView('projects')
     }
+
+    window.addEventListener('resize', evaluateWarning)
+
+    return () => {
+      window.removeEventListener('resize', evaluateWarning)
+    }
+  }, [basePath, warningStorageKey])
+
+  useEffect(() => {
+    const startTime = performance.now()
+    let rafId
+
+    const tick = now => {
+      const elapsed = now - startTime
+      const pct = Math.min(100, Math.floor((elapsed / 2000) * 100))
+      setLoadingProgress(pct)
+      if (pct < 100) {
+        rafId = requestAnimationFrame(tick)
+      }
+    }
+
+    rafId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafId)
   }, [])
+
+  useEffect(() => {
+    if (sceneReady) {
+      setLoadingProgress(100)
+    }
+  }, [sceneReady])
+
+  const dispatchMobileControl = (key, pressed) => {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent('mobile-control', { detail: { key, pressed } }))
+  }
+
+  const mobileControlHandlers = key => ({
+    onPointerDown: () => dispatchMobileControl(key, true),
+    onPointerUp: () => dispatchMobileControl(key, false),
+    onPointerLeave: () => dispatchMobileControl(key, false),
+    onPointerCancel: () => dispatchMobileControl(key, false)
+  })
 
   return (
     <div className="app">
+      {(!sceneReady || loadingProgress < 100) && (
+        <div className="scene-loading-overlay">
+          <div className="scene-loading-card">
+            <div className="scene-loading-text">
+              <span className="scene-loading-label">Igniting engines</span>
+              <span className="scene-loading-progress">{loadingProgress}%</span>
+            </div>
+            <div className="scene-loading-bar">
+              <div
+                className="scene-loading-bar-fill"
+                style={{ transform: `scaleX(${Math.max(0, Math.min(1, loadingProgress / 100))})` }}
+              />
+            </div>
+            {loadingProgress >= 100 && !sceneReady && (
+              <p className="scene-waiting-text">Waiting for hangar clearance...</p>
+            )}
+          </div>
+        </div>
+      )}
+      {showMobileWarning && (
+        <div className="mobile-warning-overlay">
+          <div className="mobile-warning-card">
+            <h2>Best experienced on desktop</h2>
+            <p>
+              Some interactions (keyboard controls, 3D view and sound) are designed primarily for laptops and
+              desktop computers.
+            </p>
+            <p className="mobile-warning-secondary">
+              You can still explore on your phone, but for the full experience please view this portfolio on a
+              computer.
+            </p>
+            <button
+              type="button"
+              className="mobile-warning-button"
+              onClick={() => {
+                setShowMobileWarning(false)
+                if (typeof window !== 'undefined') {
+                  window.sessionStorage?.setItem(warningStorageKey, 'true')
+                }
+              }}
+            >
+              Continue on this device
+            </button>
+          </div>
+        </div>
+      )}
       <ThunderEffect />
       <BackgroundSound />
       <section className="hero">
-        {view === 'home' && (
-          <div className="hero-content">
-            <p className="eyebrow">Welcome to</p>
-            <h1>My Portfolio</h1>
+        {sceneReady && view === 'home' && (
+          <div className="hero-content hero-home">
+            <h1>Welcome to my portfolio</h1>
             <p className="subtitle">An interactive flight through my work.</p>
+            <p className="designer-credit">Designed by Sandesh Pathak</p>
           </div>
         )}
-        {view === 'projects' && selectedProject && (
+        {sceneReady && view === 'projects' && selectedProject && (
           <div className="hero-content hero-project">
             <p className="eyebrow">Project</p>
             <div className="hero-project-header">
@@ -191,7 +306,7 @@ function App() {
                 >
                   <span className="sr-only">Open Project Management mono repo on GitHub</span>
                   <span className="github-mark">
-                    <img src="/pngegg.png" alt="GitHub" />
+                    <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
                   </span>
                 </button>
               )}
@@ -228,7 +343,7 @@ function App() {
                   >
                     <span className="sr-only">Open Hear Helper frontend on GitHub</span>
                     <span className="github-mark">
-                      <img src="/pngegg.png" alt="GitHub" />
+                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
                     </span>
                   </button>
                   <button
@@ -240,7 +355,7 @@ function App() {
                   >
                     <span className="sr-only">Open Hear Helper backend on GitHub</span>
                     <span className="github-mark">
-                      <img src="/pngegg.png" alt="GitHub" />
+                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
                     </span>
                   </button>
                 </>
@@ -273,7 +388,7 @@ function App() {
                   >
                     <span className="sr-only">Open Project Management mono repo on GitHub</span>
                     <span className="github-mark">
-                      <img src="/pngegg.png" alt="GitHub" />
+                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
                     </span>
                   </button>
                 </div>
@@ -425,38 +540,52 @@ function App() {
             )}
             {selectedProject.title === 'About Me' && (
               <div className="hero-project-body">
+                <div className="hero-project-header" style={{ marginBottom: '0.75rem' }}>
+                  <button
+                    type="button"
+                    className="hero-project-link-button"
+                    onClick={() => window.open('mailto:pathaksandesh025@gmail.com')}
+                  >
+                    <span className="sr-only">Email Sandesh</span>
+                    <span className="arrow" style={{ fontSize: '1.1rem', lineHeight: 1 }}>✉</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="hero-project-link-button github"
+                    onClick={() =>
+                      window.open('https://github.com/spathak-droid?tab=repositories', '_blank', 'noopener,noreferrer')
+                    }
+                  >
+                    <span className="sr-only">Open GitHub repositories</span>
+                    <span className="github-mark">
+                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
+                    </span>
+                  </button>
+                </div>
                 <p className="hero-project-link">
-                  I build end-to-end systems that connect real businesses to
-                  practical AI and modern web tooling.
-                </p>
-                <p className="hero-project-link">
-                  Contact me:
-                  <span>
-                    {' '}
-                    <a href="mailto:pathaksandesh025@gmail.com">pathaksandesh025@gmail.com</a>
-                  </span>
+                  Full-stack Software Engineer with 3+ years of experience designing and deploying scalable web and
+                  mobile solutions at All My Sons Moving and Storage. Proficient in JavaScript, TypeScript, React,
+                  Node.js, MongoDB, and AWS, with a strong focus on building efficient CRM systems, AI-driven
+                  automation, and real-time platforms. Passionate about crafting intuitive user experiences and
+                  delivering end-to-end products that streamline operations and boost team productivity.
                 </p>
                 <ul className="hero-project-points">
                   <li>
-                    Comfortable across the stack: frontend (React/Angular),
-                    backend (Node.js/NestJS/Django), databases, and DevOps.
+                    <strong>Languages:</strong> JavaScript, TypeScript, Python, Java
                   </li>
                   <li>
-                    Enjoy taking fuzzy business ideas and turning them into
-                    shippable products with clear user flows and guardrails.
+                    <strong>Frameworks &amp; Libraries:</strong> React, React Native, Node.js, Express, Spring Boot,
+                    GraphQL
                   </li>
                   <li>
-                    Strong focus on developer experience: clean APIs, typed
-                    contracts, good logging, and maintainable mono-repos.
+                    <strong>Cloud &amp; DevOps:</strong> AWS (ECS, Amplify, S3), Docker, CI/CD Pipelines, WebSockets,
+                    REST
                   </li>
                   <li>
-                    Like to work close to users and stakeholders, iterating on
-                    feedback and instrumentation instead of guessing.
+                    <strong>Databases:</strong> MongoDB, SQL, Firebase
                   </li>
                   <li>
-                    Excited about agentic systems, R2-style storage,
-                    event-driven backends, and using AI where it actually makes
-                    teams faster—not just as a buzzword.
+                    <strong>AI &amp; Tools:</strong> OpenAI API, NLP.js, RAG Pipelines, Tavily Search, MCP Tool
                   </li>
                 </ul>
               </div>
@@ -473,13 +602,14 @@ function App() {
               onHintProjectChange={setHintProject}
               onSelectProject={handleSelectProject}
               onHitChange={setHits}
+              onReady={() => setSceneReady(true)}
             />
-            <OrbitControls enableZoom={false} />
+            <OrbitControls enableZoom={false} enableRotate={false} enablePan={false} />
             <Stars radius={80} depth={40} count={4000} factor={3} />
             <Clouds2D count={10} />
             <Rain count={2000} />
           </Canvas>
-          {hintProject && view === 'home' && (
+          {sceneReady && hintProject && view === 'home' && (
             <div className="project-hint-overlay">
               <span>Press Enter to open {hintProject.title}</span>
             </div>
@@ -487,30 +617,67 @@ function App() {
         </div>
       </section>
 
-      <div className="hit-counter-overlay">
-        {hits < 3 ? (
-          <>Hits: {hits} / 3</>
-        ) : (
-          <> Press Space to restart</>
-        )}
-      </div>
-      <div className="controls-overlay">
-        <div className="controls-arrows">
-          <div className="row top-row">
-            <span className="keycap">↑</span>
+      {sceneReady && (
+        <>
+          <div className="hit-counter-overlay">
+            {hits < 3 ? (
+              <>Hits: {hits} / 3</>
+            ) : (
+              <> Press Space to restart</>
+            )}
           </div>
-          <div className="row bottom-row">
-            <span className="keycap">←</span>
-            <span className="keycap">↓</span>
-            <span className="keycap">→</span>
-          </div>
-        </div>
-        <span className="controls-text">to fly</span>
-        <span className="keycap wide">Space</span>
-        <span className="controls-text">to shoot</span>
-        <span className="keycap">Enter</span>
-        <span className="controls-text">to open project</span>
-      </div>
+          {isMobileView ? (
+            <div className="controls-overlay mobile">
+              <div className="mobile-controls-grid">
+                <div className="mobile-controls-row single">
+                  <button type="button" className="mobile-control-button wide" aria-label="Ascend" {...mobileControlHandlers('ArrowUp')}>
+                    ↑
+                  </button>
+                </div>
+                <div className="mobile-controls-row">
+                  <button type="button" className="mobile-control-button wide" aria-label="Steer left" {...mobileControlHandlers('ArrowLeft')}>
+                    ←
+                  </button>
+                  <button type="button" className="mobile-control-button" aria-label="Shoot" {...mobileControlHandlers('Space')}>
+                    Shoot
+                  </button>
+                  <button type="button" className="mobile-control-button wide" aria-label="Steer right" {...mobileControlHandlers('ArrowRight')}>
+                    →
+                  </button>
+                </div>
+                <div className="mobile-controls-row single">
+                  <button type="button" className="mobile-control-button wide" aria-label="Descend" {...mobileControlHandlers('ArrowDown')}>
+                    ↓
+                  </button>
+                </div>
+                <div className="mobile-controls-row single">
+                  <button type="button" className="mobile-control-button wide" aria-label="Open project" {...mobileControlHandlers('Enter')}>
+                    Open
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="controls-overlay">
+              <div className="controls-arrows">
+                <div className="row top-row">
+                  <span className="keycap">↑</span>
+                </div>
+                <div className="row bottom-row">
+                  <span className="keycap">←</span>
+                  <span className="keycap">↓</span>
+                  <span className="keycap">→</span>
+                </div>
+              </div>
+              <span className="controls-text">to fly</span>
+              <span className="keycap wide">Space</span>
+              <span className="controls-text">to shoot</span>
+              <span className="keycap">Enter</span>
+              <span className="controls-text">to open project</span>
+            </div>
+          )}
+        </>
+      )}
 
       {view === 'home' ? null : null}
       {transitioning && <div className="page-fade" />}

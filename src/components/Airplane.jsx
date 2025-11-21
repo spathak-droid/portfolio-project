@@ -84,7 +84,7 @@ function createInitialTargets(viewport) {
   return targets
 }
 
-export default function Airplane({ activeProject, onHintProjectChange, onSelectProject, onHitChange }) {
+export default function Airplane({ activeProject, onHintProjectChange, onSelectProject, onHitChange, onReady }) {
   const { viewport } = useThree()
   const controlRef = useRef()
   const gunSoundRef = useRef(null)
@@ -125,6 +125,20 @@ export default function Airplane({ activeProject, onHintProjectChange, onSelectP
   useEffect(() => {
     viewportRef.current = viewport
   }, [viewport])
+
+  useEffect(() => {
+    if (typeof onReady !== 'function') return undefined
+    let called = false
+    const rafId = requestAnimationFrame(() => {
+      if (!called) {
+        onReady()
+        called = true
+      }
+    })
+    return () => {
+      cancelAnimationFrame(rafId)
+    }
+  }, [onReady])
 
   useEffect(() => {
     const base = (import.meta.env && import.meta.env.BASE_URL) || '/'
@@ -1021,12 +1035,49 @@ export default function Airplane({ activeProject, onHintProjectChange, onSelectP
       keyStateRef.current[event.key] = false
     }
 
+    const handleMobileControl = event => {
+      const { key, pressed } = event.detail || {}
+      if (!key) return
+
+      const syntheticEvent = {
+        key,
+        code: key,
+        preventDefault: () => {}
+      }
+
+      if (key === 'Space') {
+        if (pressed) {
+          handleKeyDown({ ...syntheticEvent, code: 'Space' })
+        } else {
+          handleKeyUp({ ...syntheticEvent, code: 'Space' })
+        }
+        return
+      }
+
+      if (key === 'Enter') {
+        if (pressed) {
+          handleKeyDown({ ...syntheticEvent, code: 'Enter' })
+        } else {
+          handleKeyUp({ ...syntheticEvent, code: 'Enter' })
+        }
+        return
+      }
+
+      if (pressed) {
+        handleKeyDown(syntheticEvent)
+      } else {
+        handleKeyUp(syntheticEvent)
+      }
+    }
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
+    window.addEventListener('mobile-control', handleMobileControl)
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
+      window.removeEventListener('mobile-control', handleMobileControl)
     }
   }, [])
 
