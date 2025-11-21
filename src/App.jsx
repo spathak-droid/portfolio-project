@@ -7,6 +7,7 @@ import Airplane from './components/Airplane'
 import './App.css'
 import ThunderEffect from './components/ThunderEffect'
 import AboutMe from './components/AboutMe'
+import ProjectsShowcase from './components/ProjectsShowcase'
 import profilePhoto from './assets/IMG_5444.jpg'
 
 
@@ -125,8 +126,8 @@ function App() {
   const [activeProject] = useState(0)
   const [hintProject, setHintProject] = useState(null)
   const [hits, setHits] = useState(0)
-  const [selectedProject, setSelectedProject] = useState(null)
-  const [view, setView] = useState('home') // 'home' | 'projects' | 'about'
+  const [selectedProjectTitle, setSelectedProjectTitle] = useState(null)
+  const [view, setView] = useState('home') // 'home' | 'about' | 'projectsPage'
   const [transitioning, setTransitioning] = useState(false)
   const [showMobileWarning, setShowMobileWarning] = useState(false)
   const [isMobileView, setIsMobileView] = useState(false)
@@ -144,6 +145,182 @@ function App() {
     label,
     icon: `${techLogoBase}${iconFile ?? 'code'}.png`
   })
+  const projectShowcase = [
+    {
+      title: 'Lead Generation CRM Plugin',
+      role: 'Lead Full-stack Engineer',
+      summary:
+        'Embedded plugin inside All My Sons’ CRM that classifies leads, routes vendors, and powers real-time agent copilots.',
+      highlights: [
+        'RAG-powered vendor routing so agents receive next-best action suggestions.',
+        'Iframe sandbox with secure messaging bridge for CRM ↔ LLM workflows.',
+        'Latency-sensitive TypeScript/Node stack that responds in <400ms.'
+      ],
+      links: [{ label: 'Live CRM', href: 'https://stella.serviceservice.com/crm' }],
+      techStacks: [
+        {
+          title: 'Frontend',
+          items: [buildTechItem('React', 'react'), buildTechItem('Vite', 'Vite'), buildTechItem('Tailwind CSS', 'tailwind')]
+        },
+        {
+          title: 'Backend',
+          items: [buildTechItem('Node.js', 'nodejs'), buildTechItem('Express', 'express'), buildTechItem('MongoDB', 'mongodb')]
+        },
+        {
+          title: 'AI + Automation',
+          items: [buildTechItem('OpenAI API', 'openai'), buildTechItem('LangChain', 'langchain'), buildTechItem('NLP.js', 'nlpjs')]
+        }
+      ]
+    },
+    {
+      title: 'Project Management Mono Repo',
+      role: 'Architect & Individual Contributor',
+      summary:
+        'Jira-style experience with NestJS backend + Angular frontend living inside a TypeScript mono repo for faster iteration.',
+      highlights: [
+        'Role-aware boards for owners, admins, and viewers.',
+        'Shared DTOs/types across services to eliminate drift.',
+        'Event-driven notifications delivered via WebSockets.'
+      ],
+      links: [
+        {
+          label: 'GitHub',
+          href: 'https://github.com/spathak-droid/spathak-0a19fc14-d0eb-42ed-850d-63023568a3e3',
+          variant: 'ghost'
+        }
+      ],
+      techStacks: [
+        {
+          title: 'Frontend',
+          items: [buildTechItem('Angular', 'angular'), buildTechItem('Tailwind CSS', 'tailwind')]
+        },
+        {
+          title: 'Backend',
+          items: [buildTechItem('NestJS', 'nestjs'), buildTechItem('GraphQL', 'graphql'), buildTechItem('MongoDB', 'mongodb')]
+        },
+        {
+          title: 'DevOps',
+          items: [buildTechItem('AWS ECS', 'aws'), buildTechItem('CI/CD Pipelines', 'cicd'), buildTechItem('Docker', 'docker')]
+        }
+      ]
+    },
+    {
+      title: 'Agent CRM',
+      role: 'Product Engineer',
+      summary: 'Cross-company CRM that synchronizes moving ops, referral partners, and revenue automations in real time.',
+      highlights: [
+        'Journey Builder with drag-and-drop logic built on React Flow.',
+        'GraphQL gateway feeding multi-tenant dashboards.',
+        'Data contracts shared with partner APIs for automated billing.'
+      ],
+      links: [{ label: 'Live App', href: 'https://crm.serviceservice.com' }],
+      techStacks: [
+        {
+          title: 'Frontend',
+          items: [buildTechItem('React', 'react'), buildTechItem('Three.js', 'threejs')]
+        },
+        {
+          title: 'Backend',
+          items: [buildTechItem('Node.js', 'nodejs'), buildTechItem('GraphQL', 'graphql'), buildTechItem('MongoDB', 'mongodb')]
+        },
+        {
+          title: 'Realtime',
+          items: [buildTechItem('WebSockets', 'websocket'), buildTechItem('Cloudflare R2', 'cloudfare')]
+        }
+      ]
+    },
+    {
+      title: 'Hear Helper',
+      role: 'Full-stack Engineer',
+      summary: 'One-page assistant that streams AI-narrated public-domain books with custom voice pipelines.',
+      highlights: [
+        'Angular SPA with offline-friendly audio caching.',
+        'Django API orchestrating TTS jobs and chapter syncing.',
+        'Cloudflare R2 storage for cost-effective long-form audio.'
+      ],
+      links: [
+        { label: 'Frontend Repo', href: 'https://github.com/spathak-droid/HearHelper', variant: 'ghost' },
+        { label: 'Backend Repo', href: 'https://github.com/spathak-droid/HearHelper-BE', variant: 'ghost' }
+      ],
+      techStacks: [
+        {
+          title: 'Frontend',
+          items: [buildTechItem('Angular', 'angular'), buildTechItem('Tailwind CSS', 'tailwind')]
+        },
+        {
+          title: 'Backend',
+          items: [buildTechItem('Django', 'django'), buildTechItem('MongoDB', 'mongodb')]
+        },
+        {
+          title: 'Infra',
+          items: [buildTechItem('Cloudflare R2', 'cloudfare'), buildTechItem('AWS ECS', 'aws')]
+        }
+      ]
+    }
+  ]
+
+  const personalProjects = [
+    {
+      title: 'KidsZoid — Android App for Safer Pickups',
+      role: 'Android Developer',
+      summary: 'Developed a mobile app to enhance school pick-up safety and reduce traffic congestion.',
+      highlights: [
+        'Implemented real-time GPS tracking for parents and school staff to monitor student pick-ups and drop-offs.',
+        'Integrated license plate recognition and live tracking of approaching vehicles for streamlined identification.',
+        'Managed authentication and data storage using Firebase for secure, scalable backend operations.'
+      ],
+      links: [{ label: 'GitHub', href: 'https://github.com/spathak-droid/WeTrack-KidsZoid' }],
+      techStacks: [
+        {
+          title: 'Mobile',
+          items: [buildTechItem('Java', 'java'), buildTechItem('Android Studio')]
+        },
+        {
+          title: 'Cloud & APIs',
+          items: [buildTechItem('Firebase'), buildTechItem('Google Maps API')]
+        }
+      ]
+    },
+    {
+      title: 'Inventory Handler — Personal Full-Stack App',
+      role: 'Full-stack Engineer',
+      summary: 'Developed a full-stack inventory management web application with React frontend and Spring Boot backend.',
+      highlights: [
+        'Implemented role-based authentication for admin and user access levels.',
+        'Integrated Stripe API for secure payment processing and SQL for relational data storage.',
+        'Enabled users to browse inventory, add items to cart, and manage orders with real-time updates.'
+      ],
+      links: [
+        { label: 'Frontend', href: 'https://github.com/spathak-droid/amsSandesh-frontend', variant: 'ghost' },
+        { label: 'Backend', href: 'https://github.com/spathak-droid/ams-backend', variant: 'ghost' }
+      ],
+      techStacks: [
+        {
+          title: 'Frontend',
+          items: [buildTechItem('React', 'react'), buildTechItem('JavaScript', 'javascript')]
+        },
+        {
+          title: 'Backend',
+          items: [buildTechItem('Spring Boot'), buildTechItem('Java', 'java'), buildTechItem('SQL')]
+        },
+        {
+          title: 'APIs & Payments',
+          items: [buildTechItem('Stripe API'), buildTechItem('REST APIs')]
+        }
+      ]
+    }
+  ]
+
+  const mapTargetTitleToShowcase = title => {
+    const mapping = {
+      'Project Management': 'Project Management Mono Repo',
+      'Lead Generation': 'Lead Generation CRM Plugin',
+      'Agent CRM': 'Agent CRM',
+      'Hear Helper': 'Hear Helper'
+    }
+
+    return mapping[title] ?? null
+  }
   const aboutTechStacks = [
     {
       title: 'Languages',
@@ -221,20 +398,29 @@ function App() {
 
   const handleSelectProject = project => {
     if (!project) return
-    setSelectedProject(project)
+    if (project.title === 'About Me') {
+      handleNavigate('about')
+      return
+    }
+    const mappedTitle = mapTargetTitleToShowcase(project.title)
+    if (!mappedTitle) {
+      setSelectedProjectTitle(null)
+      return
+    }
+    setSelectedProjectTitle(mappedTitle)
     setTransitioning(true)
 
     setTimeout(() => {
-      setView('projects')
+      setView('projectsPage')
       setTransitioning(false)
       if (
         typeof window !== 'undefined' &&
         window.history &&
-        window.location.pathname !== `${basePath}/projects`
+        window.location.pathname !== `${basePath}/projects-showcase`
       ) {
-        window.history.pushState({}, '', `${basePath}/projects`)
+        window.history.pushState({}, '', `${basePath}/projects-showcase`)
       }
-    }, 600)
+    }, 400)
   }
 
   useEffect(() => {
@@ -251,8 +437,11 @@ function App() {
 
     evaluateWarning()
 
-    if (window.location.pathname === `${basePath}/projects`) {
-      setView('projects')
+    if (
+      window.location.pathname === `${basePath}/projects` ||
+      window.location.pathname === `${basePath}/projects-showcase`
+    ) {
+      setView('projectsPage')
     } else if (window.location.pathname === `${basePath}/about`) {
       setView('about')
     }
@@ -348,8 +537,8 @@ function App() {
 
   const handleNavigate = target => {
     setIsHamburgerOpen(false)
-    if (target !== 'projects') {
-      setSelectedProject(null)
+    if (target !== 'projectsPage') {
+      setSelectedProjectTitle(null)
       setTransitioning(false)
     }
     setView(target)
@@ -360,6 +549,8 @@ function App() {
           ? `${basePath}/projects`
           : target === 'about'
           ? `${basePath}/about`
+          : target === 'projectsPage'
+          ? `${basePath}/projects-showcase`
           : basePath || '/'
       if (window.location.pathname !== path) {
         window.history.pushState({}, '', path)
@@ -367,11 +558,14 @@ function App() {
     }
   }
 
+  const isHomeView = view === 'home'
   const isAboutView = view === 'about'
+  const isProjectsPage = view === 'projectsPage'
+  const isStandaloneView = isAboutView || isProjectsPage
 
   return (
     <div className="app">
-      {(!sceneReady || loadingProgress < 100) && !isAboutView && (
+      {(!sceneReady || loadingProgress < 100) && !isStandaloneView && (
         <div className="scene-loading-overlay">
           <div className="scene-loading-card">
             <div className="scene-loading-text">
@@ -390,7 +584,7 @@ function App() {
           </div>
         </div>
       )}
-      {showMobileWarning && !isAboutView && (
+      {showMobileWarning && !isStandaloneView && (
         <div className="mobile-warning-overlay">
           <div className="mobile-warning-card">
             <h2>Best experienced on desktop</h2>
@@ -405,8 +599,8 @@ function App() {
           </div>
         </div>
       )}
-      {!isAboutView && <ThunderEffect />}
-      {!isMobileView && !isAboutView && <BackgroundSound />}
+      {!isStandaloneView && <ThunderEffect />}
+      {!isMobileView && !isStandaloneView && <BackgroundSound />}
       <header className="hamburger-header">
         <button
           type="button"
@@ -422,8 +616,18 @@ function App() {
         <div className={`hamburger-menu${isHamburgerOpen ? ' open' : ''}`} aria-hidden={!isHamburgerOpen}>
           <button
             type="button"
-            className={`hamburger-menu-item${view === 'projects' ? ' active' : ''}`}
-            onClick={() => handleNavigate('projects')}
+            className={`hamburger-menu-item hamburger-menu-item-with-icon${isHomeView ? ' active' : ''}`}
+            onClick={() => handleNavigate('home')}
+          >
+            <span className="hamburger-menu-icon" aria-hidden>
+              ✈️
+            </span>
+            Flight Simulator
+          </button>
+          <button
+            type="button"
+            className={`hamburger-menu-item${isProjectsPage ? ' active' : ''}`}
+            onClick={() => handleNavigate('projectsPage')}
           >
             My Projects
           </button>
@@ -447,330 +651,22 @@ function App() {
             onBack={() => handleNavigate('home')}
           />
         </section>
+      ) : isProjectsPage ? (
+        <section className="projects-standalone">
+          <ProjectsShowcase
+            projects={projectShowcase}
+            personalProjects={personalProjects}
+            activeProjectTitle={selectedProjectTitle}
+            onBack={() => handleNavigate('home')}
+          />
+        </section>
       ) : (
         <section className="hero">
-          {sceneReady && view === 'home' && (
+        {sceneReady && view === 'home' && (
           <div className="hero-content hero-home">
             <h1>Welcome to my portfolio</h1>
             <p className="subtitle">An interactive flight through my work.</p>
             <p className="designer-credit">Designed by Sandesh Pathak</p>
-          </div>
-        )}
-        {sceneReady && view === 'projects' && selectedProject && (
-          <div className="hero-content hero-project">
-            <p className="eyebrow">Project</p>
-            <div className="hero-project-header">
-              <h1>{selectedProject.title}</h1>
-              {selectedProject.title === 'Lead Generation CRM Plugin' && (
-                <button
-                  type="button"
-                  className="hero-project-link-button"
-                  onClick={() =>
-                    window.open('https://stella.serviceservice.com/crm', '_blank', 'noopener,noreferrer')
-                  }
-                >
-                  <span className="sr-only">Open project</span>
-                  <span className="arrow">→</span>
-                </button>
-              )}
-              {selectedProject.title === 'Project Management Mono Repo' && (
-                <button
-                  type="button"
-                  className="hero-project-link-button github"
-                  onClick={() =>
-                    window.open(
-                      'https://github.com/spathak-droid/spathak-0a19fc14-d0eb-42ed-850d-63023568a3e3',
-                      '_blank',
-                      'noopener,noreferrer'
-                    )
-                  }
-                >
-                  <span className="sr-only">Open Project Management mono repo on GitHub</span>
-                  <span className="github-mark">
-                    <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
-                  </span>
-                </button>
-              )}
-              {selectedProject.title === 'Agent CRM' && (
-                <button
-                  type="button"
-                  className="hero-project-link-button"
-                  onClick={() =>
-                    window.open('https://crm.serviceservice.com', '_blank', 'noopener,noreferrer')
-                  }
-                >
-                  <span className="sr-only">Open Agent CRM</span>
-                  <span className="arrow">→</span>
-                </button>
-              )}
-              {selectedProject.title === 'Hear Helper' && (
-                <>
-                  <button
-                    type="button"
-                    className="hero-project-link-button"
-                    onClick={() =>
-                      window.open('https://localhost:4200/', '_blank', 'noopener,noreferrer')
-                    }
-                  >
-                    <span className="sr-only">Open Hear Helper app</span>
-                    <span className="arrow">→</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="hero-project-link-button github"
-                    onClick={() =>
-                      window.open('https://github.com/spathak-droid/HearHelper', '_blank', 'noopener,noreferrer')
-                    }
-                  >
-                    <span className="sr-only">Open Hear Helper frontend on GitHub</span>
-                    <span className="github-mark">
-                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="hero-project-link-button github"
-                    onClick={() =>
-                      window.open('https://github.com/spathak-droid/HearHelper-BE', '_blank', 'noopener,noreferrer')
-                    }
-                  >
-                    <span className="sr-only">Open Hear Helper backend on GitHub</span>
-                    <span className="github-mark">
-                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
-                    </span>
-                  </button>
-                </>
-              )}
-            </div>
-            {selectedProject.title !== 'About Me' && (
-              <p className="hero-project-button-hint">Click the buttons above to see the project or its code.</p>
-            )}
-            {selectedProject.title === 'Hear Helper' && (
-              <p className="hero-project-legend">Frontend and Backend</p>
-            )}
-            {selectedProject.title === 'Project Management Mono Repo' && (
-              <div className="hero-project-body">
-                <p className="hero-project-link">
-                  Monorepo built with <span className="tech-highlight">NestJS</span> and
-                  <span className="tech-highlight"> Angular</span> for a Jira-like project
-                  management experience.
-                </p>
-                <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-                  <button
-                    type="button"
-                    className="hero-project-link-button github"
-                    onClick={() =>
-                      window.open(
-                        'https://github.com/spathak-droid/spathak-0a19fc14-d0eb-42ed-850d-63023568a3e3',
-                        '_blank',
-                        'noopener,noreferrer'
-                      )
-                    }
-                  >
-                    <span className="sr-only">Open Project Management mono repo on GitHub</span>
-                    <span className="github-mark">
-                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
-                    </span>
-                  </button>
-                </div>
-                <ul className="hero-project-points">
-                  <li>
-                    Supports admin, owner, and viewer roles with
-                    <span className="tech-highlight"> JWT</span>-based authentication and
-                    role-aware dashboards.
-                  </li>
-                  <li>
-                    Owner-level hierarchy for organizing companies and sister
-                    orgs so owners can manage tasks across related teams.
-                  </li>
-                  <li>
-                    Fine-grained permissions to create projects, manage
-                    boards, add users, assign tasks, and update or delete
-                    work items.
-                  </li>
-                  <li>
-                    Kanban-style boards with drag-and-drop columns and
-                    cards, mirroring Jira-like task workflows.
-                  </li>
-                  <li>
-                    Designed as a mono repo so shared types, APIs, and UI
-                    components are reused between the NestJS backend and the
-                    Angular frontend.
-                  </li>
-                </ul>
-              </div>
-            )}
-            {selectedProject.title === 'Lead Generation CRM Plugin' && (
-              <div className="hero-project-body">
-                <p className="hero-project-link">
-                  Lives inside All My Sons CRM at
-                  <span> stella.serviceservice.com/crm</span>
-                </p>
-                <ul className="hero-project-points">
-                  <li>
-                    Designed and built an iframe-based sales plugin integrated into
-                    All My Sons’ internal CRM to capture and process customer leads
-                    in real time.
-                  </li>
-                  <li>
-                    Implemented <span className="tech-highlight">TypeScript</span>,
-                    <span className="tech-highlight"> React</span> (frontend), and
-                    <span className="tech-highlight"> Node.js</span> (backend) with
-                    <span className="tech-highlight"> NLP.js</span> and LLM-based service
-                    classification to extract customer intents from free-form
-                    speech.
-                  </li>
-                  <li>
-                    Integrated a lightweight
-                    <span className="tech-highlight"> retrieval-augmented generation</span>
-                    (RAG) pipeline over the LLM service table to dynamically match
-                    vendors such as SafeHaven, Penske, Junk.com, and National Van
-                    Lines.
-                  </li>
-                  <li>
-                    Used <span className="tech-highlight">WebSockets</span> for
-                    bi-directional communication between the CRM and the LLM
-                    service, enabling real-time question–response loops for sales
-                    agents.
-                  </li>
-                  <li>
-                    Simplified cross-team collaboration by embedding the plugin
-                    directly into the All My Sons CRM — allowing customer
-                    advocates to route or text customers instantly without
-                    switching apps.
-                  </li>
-                </ul>
-              </div>
-            )}
-            {selectedProject.title === 'Agent CRM' && (
-              <div className="hero-project-body">
-                <p className="hero-project-link">
-                  Agent-facing CRM for managing internal moving ops and external
-                  vendor referrals at
-                  <span> crm.serviceservice.com</span>.
-                </p>
-                <ul className="hero-project-points">
-                  <li>
-                    Developed a full-stack CRM platform to manage internal
-                    moving operations and outbound vendor referrals.
-                  </li>
-                  <li>
-                    Built tools to onboard partner companies, register
-                    services, assign management roles, and automate 10% referral
-                    fee billing via integrated service APIs.
-                  </li>
-                  <li>
-                    Implemented an agentic-flow system with a visual Journey
-                    Builder (React Flow) so non-technical users can design
-                    conversational and conditional logic flows across chat,
-                    SMS, and voice.
-                  </li>
-                  <li>
-                    Enabled cross-company collaboration: e.g. SafeHaven agents
-                    can transfer moving calls to All My Sons, while All My Sons
-                    can route pest-control or rental leads back to partners.
-                  </li>
-                  <li>
-                    Architected with <span className="tech-highlight">Node.js</span>,
-                    <span className="tech-highlight"> GraphQL</span>,
-                    <span className="tech-highlight"> MongoDB</span>, and
-                    <span className="tech-highlight"> WebSockets</span> for real-time
-                    messaging, live departmental updates, and multi-team
-                    coordination.
-                  </li>
-                  <li>
-                    Delivered measurable revenue by automating lead exchange,
-                    strengthening partner relationships, and generating
-                    referral-based income streams.
-                  </li>
-                </ul>
-              </div>
-            )}
-            {selectedProject.title === 'Hear Helper' && (
-              <div className="hero-project-body">
-                <p className="hero-project-link">
-                  Hear Helper lets you listen to public-domain books using AI
-                  voices you choose, running as a focused one-page assistant.
-                </p>
-                <ul className="hero-project-points">
-                  <li>
-                    Built with an <span className="tech-highlight">Angular</span> SPA
-                    frontend and <span className="tech-highlight">Django</span> backend to
-                    manage user libraries, playback sessions, and audio jobs.
-                  </li>
-                  <li>
-                    Uses <span className="tech-highlight">Cloudflare R2</span> for
-                    storing generated audio so you can stream long-form book audio
-                    efficiently and cheaply.
-                  </li>
-                  <li>
-                    Integrates multiple TTS models so you can pick the voice
-                    and style you want, then generate full-book audio on demand.
-                  </li>
-                  <li>
-                    One-page assistant UI where you can see your available
-                    books, play/pause, jump chapters, change voice models, and
-                    resume where you left off.
-                  </li>
-                  <li>
-                    Designed around public-domain content so you can safely
-                    explore classic literature as high-quality generated audio.
-                  </li>
-                </ul>
-              </div>
-            )}
-            {selectedProject.title === 'About Me' && (
-              <div className="hero-project-body">
-                <div className="hero-project-header" style={{ marginBottom: '0.75rem' }}>
-                  <button
-                    type="button"
-                    className="hero-project-link-button"
-                    onClick={() => window.open('mailto:pathaksandesh025@gmail.com')}
-                  >
-                    <span className="sr-only">Email Sandesh</span>
-                    <span className="arrow" style={{ fontSize: '1.1rem', lineHeight: 1 }}>✉</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="hero-project-link-button github"
-                    onClick={() =>
-                      window.open('https://github.com/spathak-droid?tab=repositories', '_blank', 'noopener,noreferrer')
-                    }
-                  >
-                    <span className="sr-only">Open GitHub repositories</span>
-                    <span className="github-mark">
-                      <img src={`${import.meta.env.BASE_URL}pngegg.png`} alt="GitHub" />
-                    </span>
-                  </button>
-                </div>
-                <p className="hero-project-link">
-                  Full-stack Software Engineer with 3+ years of experience designing and deploying scalable web and
-                  mobile solutions at All My Sons Moving and Storage. Proficient in JavaScript, TypeScript, React,
-                  Node.js, MongoDB, and AWS, with a strong focus on building efficient CRM systems, AI-driven
-                  automation, and real-time platforms. Passionate about crafting intuitive user experiences and
-                  delivering end-to-end products that streamline operations and boost team productivity.
-                </p>
-                <ul className="hero-project-points">
-                  <li>
-                    <strong>Languages:</strong> JavaScript, TypeScript, Python, Java
-                  </li>
-                  <li>
-                    <strong>Frameworks &amp; Libraries:</strong> React, React Native, Node.js, Express, Spring Boot,
-                    GraphQL
-                  </li>
-                  <li>
-                    <strong>Cloud &amp; DevOps:</strong> AWS (ECS, Amplify, S3), Docker, CI/CD Pipelines, WebSockets,
-                    REST
-                  </li>
-                  <li>
-                    <strong>Databases:</strong> MongoDB, SQL, Firebase
-                  </li>
-                  <li>
-                    <strong>AI &amp; Tools:</strong> OpenAI API, NLP.js, RAG Pipelines, Tavily Search, MCP Tool
-                  </li>
-                </ul>
-              </div>
-            )}
           </div>
         )}
         <div className="canvas-container">
@@ -799,7 +695,7 @@ function App() {
       </section>
       )}
 
-      {sceneReady && !isAboutView && (
+      {sceneReady && !isStandaloneView && (
         <>
           <div className="hit-counter-overlay">
             {hits < 3 ? (
@@ -855,7 +751,7 @@ function App() {
       )}
 
       {view === 'home' ? null : null}
-      {transitioning && !isAboutView && <div className="page-fade" />}
+      {transitioning && !isStandaloneView && <div className="page-fade" />}
       {showResumeModal && (
         <div className="resume-modal-overlay" role="dialog" aria-modal="true" aria-label="Sandesh Pathak resume">
           <div className="resume-modal">
