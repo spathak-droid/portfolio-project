@@ -132,7 +132,6 @@ function App() {
   const basePath = ((import.meta.env.BASE_URL ?? '/') === '/' ? '' : (import.meta.env.BASE_URL ?? '/').replace(/\/$/, ''))
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [showSteerHint, setShowSteerHint] = useState(true)
-  const warningStorageKey = 'mobileWarningDismissedSession'
 
   const handleSelectProject = project => {
     if (!project) return
@@ -156,18 +155,12 @@ function App() {
     if (typeof window === 'undefined') return undefined
 
     const evaluateWarning = () => {
-      const hasDismissed = window.sessionStorage?.getItem(warningStorageKey) === 'true'
       const isSmallScreen = window.innerWidth <= 900
       const isLikelyMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent)
       const mobileState = isSmallScreen || isLikelyMobile
 
       setIsMobileView(mobileState)
-
-      if (!hasDismissed && mobileState) {
-        setShowMobileWarning(true)
-      } else if (hasDismissed || !mobileState) {
-        setShowMobileWarning(false)
-      }
+      setShowMobileWarning(mobileState)
     }
 
     evaluateWarning()
@@ -181,7 +174,7 @@ function App() {
     return () => {
       window.removeEventListener('resize', evaluateWarning)
     }
-  }, [basePath, warningStorageKey])
+  }, [basePath])
 
   useEffect(() => {
     const startTime = performance.now()
@@ -209,6 +202,19 @@ function App() {
   useEffect(() => {
     setShowSteerHint(isMobileView)
   }, [isMobileView])
+
+  const showMobileControls = !showMobileWarning && isMobileView && view === 'home'
+  const autoFire = isMobileView && !showMobileWarning && hits < 3
+
+  useEffect(() => {
+    if (!sceneReady) return undefined
+    if (autoFire) {
+      dispatchMobileControl('Space', true)
+      return () => dispatchMobileControl('Space', false)
+    }
+    dispatchMobileControl('Space', false)
+    return undefined
+  }, [autoFire, sceneReady])
 
   const dispatchMobileControl = (key, pressed) => {
     if (typeof window === 'undefined') return
@@ -264,21 +270,9 @@ function App() {
               desktop computers.
             </p>
             <p className="mobile-warning-secondary">
-              You can still explore on your phone, but for the full experience please view this portfolio on a
-              computer.
+              Please view this portfolio on a computer to fly the airplane, explore wormholes, and experience the 3D
+              scene fully.
             </p>
-            <button
-              type="button"
-              className="mobile-warning-button"
-              onClick={() => {
-                setShowMobileWarning(false)
-                if (typeof window !== 'undefined') {
-                  window.sessionStorage?.setItem(warningStorageKey, 'true')
-                }
-              }}
-            >
-              Continue on this device
-            </button>
           </div>
         </div>
       )}
@@ -645,7 +639,7 @@ function App() {
               <> Press Space to restart</>
             )}
           </div>
-          {isMobileView ? (
+          {showMobileControls ? (
             <>
               <div className="mobile-steer-zone mobile-steer-zone-left" aria-hidden {...mobileControlHandlers('ArrowLeft')} />
               <div className="mobile-steer-zone mobile-steer-zone-right" aria-hidden {...mobileControlHandlers('ArrowRight')} />
@@ -654,10 +648,6 @@ function App() {
               <div className="mobile-circle-controls">
                 {showSteerHint && <div className="mobile-steer-banner">Tap screen edges to steer</div>}
                 <div className="mobile-circle-row">
-                  <button type="button" className="mobile-circle-button" aria-label="Shoot" {...mobileControlHandlers('Space')}>
-                    <span>●</span>
-                    <small>Shoot</small>
-                  </button>
                   <button
                     type="button"
                     className="mobile-circle-button"
