@@ -333,6 +333,12 @@ function App() {
   }
 
   const openResumeModal = () => {
+    if (isMobileView) {
+      if (typeof window !== 'undefined') {
+        window.open(resumeUrl, '_blank', 'noopener,noreferrer')
+      }
+      return
+    }
     setShowResumeModal(true)
   }
 
