@@ -26,7 +26,7 @@ const PROJECTS = [
     badge: '#f9fafb'
   },
   {
-    title: '3D Portfolio',
+    title: 'About Me',
     accent: '#22c55e',
     badge: '#f9fafb'
   },
@@ -63,8 +63,13 @@ function createInitialTargets(viewport) {
     { x: 0, y: 0, z: -3.2 }           // center
   ]
 
+  // Explicitly map projects to positions so "About Me" is centered
+  // PROJECTS order: [Mono Repo, About Me, Lead Gen, Agent CRM, Hear Helper]
+  const projectOrder = [0, 2, 3, 4, 1] // indices into PROJECTS per target id
+
   for (let i = 0; i < TARGET_COUNT; i++) {
     const pos = layouts[i] || layouts[layouts.length - 1]
+    const projectIndex = projectOrder[i % projectOrder.length] ?? 0
 
     targets.push({
       id: i,
@@ -72,7 +77,7 @@ function createInitialTargets(viewport) {
       y: pos.y,
       z: pos.z,
       alive: true,
-      projectIndex: i % PROJECTS.length
+      projectIndex
     })
   }
 
@@ -1357,16 +1362,16 @@ export default function Airplane({ activeProject, onHintProjectChange, onSelectP
 
               {/* title hovering above wormhole */}
               <Text
-                position={[0, 1.35, 0.35]}
-                fontSize={0.3}
-                maxWidth={3}
+                position={[0, 1.6, 0.45]}
+                fontSize={0.46}
+                maxWidth={3.6}
                 color="#f9fafb"
                 anchorX="center"
                 anchorY="middle"
-                outlineWidth={0.03}
+                outlineWidth={0.05}
                 outlineColor="#020617"
                 strokeColor={accent}
-                strokeWidth={0.012}
+                strokeWidth={0.02}
               >
                 {project.title}
               </Text>

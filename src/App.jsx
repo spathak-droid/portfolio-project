@@ -244,6 +244,9 @@ function App() {
                 </>
               )}
             </div>
+            {selectedProject.title !== 'About Me' && (
+              <p className="hero-project-button-hint">Click the buttons above to see the project or its code.</p>
+            )}
             {selectedProject.title === 'Hear Helper' && (
               <p className="hero-project-legend">Frontend and Backend</p>
             )}
@@ -414,6 +417,44 @@ function App() {
                   <li>
                     Designed around public-domain content so you can safely
                     explore classic literature as high-quality generated audio.
+                  </li>
+                </ul>
+              </div>
+            )}
+            {selectedProject.title === 'About Me' && (
+              <div className="hero-project-body">
+                <p className="hero-project-link">
+                  I build end-to-end systems that connect real businesses to
+                  practical AI and modern web tooling.
+                </p>
+                <p className="hero-project-link">
+                  Contact me:
+                  <span>
+                    {' '}
+                    <a href="mailto:pathaksandesh025@gmail.com">pathaksandesh025@gmail.com</a>
+                  </span>
+                </p>
+                <ul className="hero-project-points">
+                  <li>
+                    Comfortable across the stack: frontend (React/Angular),
+                    backend (Node.js/NestJS/Django), databases, and DevOps.
+                  </li>
+                  <li>
+                    Enjoy taking fuzzy business ideas and turning them into
+                    shippable products with clear user flows and guardrails.
+                  </li>
+                  <li>
+                    Strong focus on developer experience: clean APIs, typed
+                    contracts, good logging, and maintainable mono-repos.
+                  </li>
+                  <li>
+                    Like to work close to users and stakeholders, iterating on
+                    feedback and instrumentation instead of guessing.
+                  </li>
+                  <li>
+                    Excited about agentic systems, R2-style storage,
+                    event-driven backends, and using AI where it actually makes
+                    teams faster—not just as a buzzword.
                   </li>
                 </ul>
               </div>
