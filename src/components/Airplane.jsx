@@ -1,81 +1,157 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
+import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import gsap from 'gsap'
 
 const CONTROL_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 const SMOKE_COUNT = 32
 const FIRE_RATE_MS = 100
+const TARGET_COUNT = 5
+const TARGET_HIT_RADIUS = 0.8
 
-export default function Airplane({ activeProject }) {
+const SHARD_DIRECTIONS = [
+  [1, 0.4, 0.2],
+  [-1, 0.3, -0.2],
+  [0.6, 0.8, -0.4],
+  [-0.7, 0.7, 0.3],
+  [0.3, -0.6, 0.8],
+  [-0.4, -0.7, -0.6]
+]
+
+const PROJECTS = [
+  {
+    title: 'Project Management Mono Repo',
+    accent: '#a855f7',
+    badge: '#f9fafb'
+  },
+  {
+    title: '3D Portfolio',
+    accent: '#22c55e',
+    badge: '#f9fafb'
+  },
+  {
+    title: 'Lead Generation CRM Plugin',
+    accent: '#f97316',
+    badge: '#0f172a'
+  },
+  {
+    title: 'Agent CRM',
+    accent: '#facc15',
+    badge: '#0f172a'
+  },
+  {
+    title: 'Hear Helper',
+    accent: '#6366f1',
+    badge: '#0f172a'
+  }
+]
+
+function createInitialTargets(viewport) {
+  const targets = []
+  const width = viewport?.width ?? 16
+  const height = viewport?.height ?? 9
+
+  const maxX = width / 2 - 0.6
+  const maxY = height / 2 - 0.6
+
+  const layouts = [
+    { x: -maxX, y: maxY, z: -3.2 },   // top-left
+    { x: maxX, y: maxY, z: -3.2 },    // top-right
+    { x: -maxX, y: -maxY, z: -3.2 },  // bottom-left
+    { x: maxX, y: -maxY, z: -3.2 },   // bottom-right
+    { x: 0, y: 0, z: -3.2 }           // center
+  ]
+
+  for (let i = 0; i < TARGET_COUNT; i++) {
+    const pos = layouts[i] || layouts[layouts.length - 1]
+
+    targets.push({
+      id: i,
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+      alive: true,
+      projectIndex: i % PROJECTS.length
+    })
+  }
+
+  return targets
+}
+
+export default function Airplane({ activeProject, onHintProjectChange, onSelectProject, onHitChange }) {
   const { viewport } = useThree()
   const controlRef = useRef()
-  const gunSoundRef = useRef(null);
+  const gunSoundRef = useRef(null)
+  const rocketSoundRef = useRef(null)
+  const audioCtxRef = useRef(null)
   const floatRef = useRef()
   const planeRef = useRef()
   const keyStateRef = useRef({})
+  const hasInteractedRef = useRef(false)
   const movementRef = useRef({ x: -3, y: 2, z: 0, vx: 0, vy: 0, vz: 0 })
   const smokeParticlesRef = useRef([])
   const propellerRefs = useRef([])
   const noseGunRefs = useRef([])
   const lasersRef = useRef([])
+  const targetsRef = useRef([])
+  const explosionsRef = useRef([])
+  const rocketsRef = useRef([])
   const firingRef = useRef(false)
   const lastShotRef = useRef(0)
+  const lastRocketRef = useRef(0)
   const laserIdRef = useRef(0)
   const aimRef = useRef(new THREE.Vector3(1, 0, 0))
   const viewportRef = useRef(viewport)
+  const crashedRef = useRef(false)
+  const hitsRef = useRef(0)
   const [hovered, setHovered] = useState(false)
   const [lasers, setLasers] = useState([])
+  const [targets, setTargets] = useState(() => {
+    const initial = createInitialTargets(viewport)
+    targetsRef.current = initial
+    return initial
+  })
+  const [explosions, setExplosions] = useState([])
+  const [hintTargetId, setHintTargetId] = useState(null)
+  const [rockets, setRockets] = useState([])
+  const [crashed, setCrashed] = useState(false)
 
   useEffect(() => {
     viewportRef.current = viewport
   }, [viewport])
 
   useEffect(() => {
-  gunSoundRef.current = new Audio('/sounds/gun.mp3');
-  gunSoundRef.current.volume = 0.9; // Adjust volume as needed
-  return () => {
-    if (gunSoundRef.current) {
-      gunSoundRef.current.pause();
-      gunSoundRef.current = null;
-    }
-  };
-}, []);
-
-// Add this inside the Airplane component, with other effects
-useEffect(() => {
-  const handleKeyUp = (e) => {
-    if (e.code === 'Space') {
-      if (gunSoundRef.current) {
-        gunSoundRef.current.pause();
-      }
-      firingRef.current = false;
-    }
-  };
-
-  window.addEventListener('keyup', handleKeyUp);
-  return () => {
-    window.removeEventListener('keyup', handleKeyUp);
-  };
-}, []);
-
-// Also update the keydown handler to ensure sound plays when space is pressed
-useEffect(() => {
-  const handleKeyDown = (e) => {
-    if (e.code === 'Space') {
-      e.preventDefault();
-      if (!firingRef.current) {
-        firingRef.current = true;
-        fireLasers(performance.now());
+    rocketSoundRef.current = new Audio('/sounds/rocket.mp3')
+    rocketSoundRef.current.volume = 0.6
+    return () => {
+      if (rocketSoundRef.current) {
+        rocketSoundRef.current.pause()
+        rocketSoundRef.current = null
       }
     }
-  };
+  }, [])
 
-  window.addEventListener('keydown', handleKeyDown);
-  return () => {
-    window.removeEventListener('keydown', handleKeyDown);
-  };
-}, []);
+  useEffect(() => {
+    if (typeof onHitChange !== 'function') return
+    onHitChange(hitsRef.current)
+  }, [onHitChange])
+
+  useEffect(() => {
+    if (typeof onHintProjectChange !== 'function') return
+    if (hintTargetId == null) {
+      onHintProjectChange(null)
+      return
+    }
+
+    const t = targetsRef.current.find(target => target.id === hintTargetId)
+    if (!t) {
+      onHintProjectChange(null)
+    } else {
+      const project = PROJECTS[t.projectIndex]
+      onHintProjectChange(project || null)
+    }
+  }, [hintTargetId, onHintProjectChange])
 
   useEffect(() => {
     const group = controlRef.current
@@ -181,16 +257,31 @@ useEffect(() => {
 
       if (group) {
         const keyState = keyStateRef.current
-        const inputX = (keyState.ArrowRight ? 1 : 0) - (keyState.ArrowLeft ? 1 : 0)
-        const inputY = (keyState.ArrowUp ? 1 : 0) - (keyState.ArrowDown ? 1 : 0)
+        const crashedNow = crashedRef.current
 
-        movement.vx += inputX * 0.012
-        movement.vy += inputY * 0.012
-        movement.vz += (Math.abs(inputX) + Math.abs(inputY)) * -0.003
+        const inputX = crashedNow
+          ? 0
+          : (keyState.ArrowRight ? 1 : 0) - (keyState.ArrowLeft ? 1 : 0)
+        const inputY = crashedNow
+          ? 0
+          : (keyState.ArrowUp ? 1 : 0) - (keyState.ArrowDown ? 1 : 0)
 
-        movement.vx *= 0.85
-        movement.vy *= 0.85
-        movement.vz *= 0.92
+        if (!crashedNow) {
+          movement.vx += inputX * 0.012
+          movement.vy += inputY * 0.012
+          movement.vz += (Math.abs(inputX) + Math.abs(inputY)) * -0.003
+
+          movement.vx *= 0.85
+          movement.vy *= 0.85
+          movement.vz *= 0.92
+        } else {
+          // simple crash physics: drift forward, fall down, and slowly sink in Z
+          movement.vy -= 0.011
+          movement.vz -= 0.004
+          movement.vx *= 0.96
+          movement.vy *= 0.985
+          movement.vz *= 0.985
+        }
 
         const { width, height } = viewportRef.current
         const maxX = width / 2 - 0.4
@@ -217,9 +308,20 @@ useEffect(() => {
           window.scrollBy({ top: -overflow * window.innerHeight * 0.3, behavior: 'auto' })
         }
 
-        const rollTarget = THREE.MathUtils.clamp(-inputX * 0.6, -0.8, 0.8)
-        const pitchTarget = THREE.MathUtils.clamp(-inputY * 0.5, -0.55, 0.55)
-        const yawTarget = THREE.MathUtils.clamp(inputX * 0.25, -0.35, 0.35)
+        let rollTarget
+        let pitchTarget
+        let yawTarget
+
+        if (!crashedRef.current) {
+          rollTarget = THREE.MathUtils.clamp(-inputX * 0.6, -0.8, 0.8)
+          pitchTarget = THREE.MathUtils.clamp(-inputY * 0.5, -0.55, 0.55)
+          yawTarget = THREE.MathUtils.clamp(inputX * 0.25, -0.35, 0.35)
+        } else {
+          // tumble the plane when crashed
+          rollTarget = group.rotation.z + 0.18
+          pitchTarget = -0.9
+          yawTarget = group.rotation.y + 0.04
+        }
 
         group.rotation.x = THREE.MathUtils.lerp(group.rotation.x, pitchTarget, 0.2)
         group.rotation.y = THREE.MathUtils.lerp(group.rotation.y, yawTarget, 0.2)
@@ -228,6 +330,34 @@ useEffect(() => {
         const plane = planeRef.current
         if (plane) {
           plane.updateMatrixWorld(true)
+        }
+
+        // find nearest alive target for hint popup
+        if (targetsRef.current.length) {
+          const px = movement.x
+          const py = movement.y
+          const pz = movement.z
+          const hintRadius = 3
+          const hintRadiusSq = hintRadius * hintRadius
+          let bestId = null
+          let bestDistSq = hintRadiusSq
+
+          for (let i = 0; i < targetsRef.current.length; i++) {
+            const t = targetsRef.current[i]
+            if (!t.alive) continue
+            const dx = px - t.x
+            const dy = py - t.y
+            const dz = pz - t.z
+            const distSq = dx * dx + dy * dy + dz * dz
+            if (distSq <= bestDistSq) {
+              bestDistSq = distSq
+              bestId = t.id
+            }
+          }
+
+          setHintTargetId(prev => (prev === bestId ? prev : bestId))
+        } else if (hintTargetId !== null) {
+          setHintTargetId(null)
         }
 
         const aimVector = aimRef.current
@@ -254,31 +384,246 @@ useEffect(() => {
         fireLasers(now)
       }
 
+      // spawn rockets from the left side moving toward the plane (less frequent)
+      // but only after the player has interacted at least once
+      const rocketInterval = 3500
+      if (hasInteractedRef.current && !crashedRef.current && now - lastRocketRef.current >= rocketInterval) {
+        const { width, height } = viewportRef.current || { width: 16, height: 9 }
+        const maxX = width / 2
+        const maxY = height / 2
+
+        const spawnX = -maxX - 4
+        const spawnY = (Math.random() - 0.5) * (height - 2)
+        const spawnZ = (Math.random() - 0.5) * 4
+
+        const targetX = movement.x
+        const targetY = movement.y
+        const targetZ = movement.z
+
+        const dir = new THREE.Vector3(targetX - spawnX, targetY - spawnY, targetZ - spawnZ).normalize()
+        const speed = 0.04
+        const vx = dir.x * speed
+        const vy = dir.y * speed
+        const vz = dir.z * speed
+
+        const rocket = {
+          id: `rocket-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          x: spawnX,
+          y: spawnY,
+          z: spawnZ,
+          vx,
+          vy,
+          vz,
+          ttl: 900
+        }
+
+        const nextRockets = [...rocketsRef.current, rocket]
+        rocketsRef.current = nextRockets
+        setRockets(nextRockets)
+        if (rocketSoundRef.current) {
+          rocketSoundRef.current.currentTime = 0
+          rocketSoundRef.current.play().catch(() => {})
+        }
+        lastRocketRef.current = now
+      }
+
       if (lasersRef.current.length) {
         let updated = false
-        const updatedLasers = lasersRef.current.map(laser => {
-          const ttl = laser.ttl !== undefined ? laser.ttl - 1 : 90
-          const next = {
-            ...laser,
-            x: laser.x + laser.vx,
-            y: laser.y + laser.vy,
-            z: laser.z + laser.vz,
-            ttl
-          }
-          return next
-        }).filter(l => l.ttl > 0 && Math.abs(l.x) < 50 && Math.abs(l.y) < 50 && Math.abs(l.z) < 50)
 
-        if (updatedLasers.length !== lasersRef.current.length) {
-          updated = true
+        // move lasers forward
+        let updatedLasers = lasersRef.current
+          .map(laser => {
+            const ttl = laser.ttl !== undefined ? laser.ttl - 1 : 90
+            const next = {
+              ...laser,
+              x: laser.x + laser.vx,
+              y: laser.y + laser.vy,
+              z: laser.z + laser.vz,
+              ttl
+            }
+            return next
+          })
+          .filter(l => l.ttl > 0 && Math.abs(l.x) < 50 && Math.abs(l.y) < 50 && Math.abs(l.z) < 50)
+
+        // If a laser passes near a wormhole, deflect its direction instead of
+        // destroying the wormhole. Wormholes always stay alive.
+        if (updatedLasers.length && targetsRef.current.length) {
+          const deflectRadius = TARGET_HIT_RADIUS * 1.1
+          const deflectRadiusSq = deflectRadius * deflectRadius
+
+          const targets = targetsRef.current
+          updatedLasers = updatedLasers.map(laser => {
+            let deflected = false
+
+            for (let i = 0; i < targets.length; i++) {
+              const t = targets[i]
+              const dx = laser.x - t.x
+              const dy = laser.y - t.y
+              const dz = laser.z - t.z
+              const distSq = dx * dx + dy * dy + dz * dz
+              if (distSq <= deflectRadiusSq) {
+                // simple deflection: reflect the laser velocity around the
+                // vector from target to laser and dampen slightly so it feels
+                // like it "bounces" off the wormhole
+                const nx = dx
+                const ny = dy
+                const nz = dz
+                const nLen = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1
+                const ux = nx / nLen
+                const uy = ny / nLen
+                const uz = nz / nLen
+
+                const dot = laser.vx * ux + laser.vy * uy + laser.vz * uz
+                const rvx = laser.vx - 2 * dot * ux
+                const rvy = laser.vy - 2 * dot * uy
+                const rvz = laser.vz - 2 * dot * uz
+
+                const damp = 0.8
+                laser.vx = rvx * damp
+                laser.vy = rvy * damp
+                laser.vz = rvz * damp
+
+                deflected = true
+                break
+              }
+            }
+
+            if (deflected) {
+              updated = true
+            }
+            return laser
+          })
         }
 
         lasersRef.current = updatedLasers
         if (updated) {
           setLasers(updatedLasers)
         } else if (lasersRef.current.length) {
-          // even if counts same, still need to update positions each frame
           setLasers([...updatedLasers])
         }
+      }
+
+      if (!crashedRef.current && rocketsRef.current.length) {
+        // move rockets
+        let updatedRockets = rocketsRef.current
+          .map(r => ({
+            ...r,
+            x: r.x + r.vx,
+            y: r.y + r.vy,
+            z: r.z + r.vz,
+            ttl: r.ttl - 1
+          }))
+          .filter(r => r.ttl > 0 && r.x < (viewportRef.current?.width || 16))
+
+        const newRocketExplosions = []
+        // allow near hits around the back of the missile, not just perfect center hits
+        const rocketHitRadius = 1.2
+        const rocketHitRadiusSq = rocketHitRadius * rocketHitRadius
+
+        // laser-rocket collisions
+        if (lasersRef.current.length && updatedRockets.length) {
+          const lasers = [...lasersRef.current]
+
+          for (let i = updatedRockets.length - 1; i >= 0; i--) {
+            const r = updatedRockets[i]
+            let destroyed = false
+
+            for (let j = lasers.length - 1; j >= 0; j--) {
+              const l = lasers[j]
+              // bias the hit check slightly toward the tail (behind) of the rocket
+              const hitCenterX = r.x - 0.35
+              const dx = l.x - hitCenterX
+              const dy = l.y - r.y
+              const dz = l.z - r.z
+              const distSq = dx * dx + dy * dy + dz * dz
+              if (distSq <= rocketHitRadiusSq) {
+                // remove rocket and laser, spawn explosion
+                updatedRockets.splice(i, 1)
+                lasers.splice(j, 1)
+                newRocketExplosions.push({
+                  id: `rocket-laser-${r.id}-${j}`,
+                  x: r.x,
+                  y: r.y,
+                  z: r.z,
+                  ttl: 24
+                })
+                destroyed = true
+                break
+              }
+            }
+
+            if (destroyed && i > updatedRockets.length - 1) {
+              // index may have shifted; continue safely
+              continue
+            }
+          }
+
+          lasersRef.current = lasers
+          setLasers(lasers)
+        }
+
+        // plane-rocket proximity (direct hit) explosions + hit counter + crash on 3
+        if (updatedRockets.length) {
+          const px = movementRef.current.x
+          const py = movementRef.current.y
+          const pz = movementRef.current.z
+          const planeRadiusSq = 1.2 * 1.2
+
+          for (let i = updatedRockets.length - 1; i >= 0; i--) {
+            const r = updatedRockets[i]
+            const dx = px - r.x
+            const dy = py - r.y
+            const dz = pz - r.z
+            const distSq = dx * dx + dy * dy + dz * dz
+            if (distSq <= planeRadiusSq) {
+              updatedRockets.splice(i, 1)
+              newRocketExplosions.push({
+                id: `rocket-plane-${r.id}`,
+                x: r.x,
+                y: r.y,
+                z: r.z,
+                ttl: 26
+              })
+
+              // increment hit counter up to 3 and crash on third hit
+              if (!crashedRef.current) {
+                const currentHits = hitsRef.current
+                const nextHits = Math.min(3, currentHits + 1)
+                hitsRef.current = nextHits
+                if (typeof onHitChange === 'function') {
+                  onHitChange(nextHits)
+                }
+
+                if (nextHits >= 3) {
+                  crashedRef.current = true
+                  setCrashed(true)
+
+                  // on crash, clear all remaining rockets so they stop
+                  rocketsRef.current = []
+                  setRockets([])
+                }
+              }
+            }
+          }
+        }
+
+        if (newRocketExplosions.length) {
+          const combined = [...explosionsRef.current, ...newRocketExplosions]
+          explosionsRef.current = combined
+          setExplosions(combined)
+        }
+
+        rocketsRef.current = updatedRockets
+        setRockets(updatedRockets)
+      }
+
+      if (explosionsRef.current.length) {
+        const updatedExplosions = explosionsRef.current
+          .map(ex => ({ ...ex, ttl: ex.ttl - 1 }))
+          .filter(ex => ex.ttl > 0)
+
+        explosionsRef.current = updatedExplosions
+        setExplosions(updatedExplosions)
       }
 
       const time = performance.now() * 0.001
@@ -474,13 +819,46 @@ useEffect(() => {
     if (glowRight) gsap.to(glowRight.material, { opacity: config.contrail, duration, ease: 'sine.out' })
   }, [activeProject])
 
-  const fireLasers = now => {
+  const playTick = () => {
+    if (typeof window === 'undefined') return
 
-    if (gunSoundRef.current) {
-      gunSoundRef.current.currentTime = 0
-      gunSoundRef.current.play().catch(e => console.error('Gun sound error:', e))
+    let ctx = audioCtxRef.current
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      ctx = new AC()
+      audioCtxRef.current = ctx
     }
 
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
+
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    osc.type = 'square'
+
+    const now = ctx.currentTime
+
+    // start at higher pitch then drop quickly for a gun-like click
+    osc.frequency.setValueAtTime(1800, now)
+    osc.frequency.exponentialRampToValueAtTime(420, now + 0.09)
+
+    // fast attack, short decay, slightly lower volume
+    gain.gain.setValueAtTime(0.1, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + 0.12)
+  }
+
+  const fireLasers = now => {
+    // play a short tick for each firing burst
+    playTick()
     const controlGroup = controlRef.current
     if (controlGroup) controlGroup.updateMatrixWorld(true)
 
@@ -552,11 +930,70 @@ useEffect(() => {
 
   useEffect(() => {
     const handleKeyDown = event => {
+      // mark that the player has interacted so missiles can start spawning
+      if (!hasInteractedRef.current) {
+        hasInteractedRef.current = true
+      }
+
       if (event.code === 'Space' || event.key === ' ') {
         event.preventDefault()
+        // if fully crashed (3/3 hits), Space reloads the page to continue
+        if (crashedRef.current && hitsRef.current >= 3) {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/'
+          }
+          return
+        }
+
         if (!firingRef.current) {
           firingRef.current = true
           fireLasers(performance.now())
+        }
+        return
+      }
+
+      if (
+        event.code === 'Enter' ||
+        event.code === 'NumpadEnter' ||
+        event.key === 'Enter' ||
+        event.key === 'Return'
+      ) {
+        if (typeof onSelectProject === 'function') {
+          let target = null
+
+          // Prefer the current hinted target if we have one
+          if (hintTargetId != null) {
+            target = targetsRef.current.find(t => t.id === hintTargetId && t.alive)
+          }
+
+          // If no hinted target, fall back to the nearest alive target to the plane
+          if (!target) {
+            const { x: px, y: py, z: pz } = movementRef.current
+            let best = null
+            let bestDistSq = Infinity
+            for (const t of targetsRef.current) {
+              if (!t.alive) continue
+              const dx = t.x - px
+              const dy = t.y - py
+              const dz = t.z - pz
+              const d2 = dx * dx + dy * dy + dz * dz
+              if (d2 < bestDistSq) {
+                bestDistSq = d2
+                best = t
+              }
+            }
+            target = best
+          }
+
+          if (target) {
+            const project = PROJECTS[target.projectIndex]
+            if (project) {
+              // small delay so the wormhole enter animation can play before page change
+              setTimeout(() => {
+                onSelectProject(project)
+              }, 600)
+            }
+          }
         }
         return
       }
@@ -843,6 +1280,246 @@ useEffect(() => {
         </group>
       </group>
     </group>
+
+      <group name="targets">
+        {targets.filter(t => t.alive).map(target => {
+          const project = PROJECTS[target.projectIndex] || PROJECTS[0]
+          const accent = project.accent || '#38bdf8'
+          const badgeColor = project.badge || '#f9fafb'
+
+          const { height } = viewportRef.current || { height: 9 }
+          const maxY = height / 2 - 0.6
+          const floorY = -maxY - 0.5
+          const poleLength = Math.max(1.5, target.y - floorY)
+          const poleHalf = poleLength / 2
+          const poleCenterLocalY = floorY + poleHalf - target.y
+          const movement = movementRef.current || { x: 0, y: 0, z: 0 }
+          const dx = movement.x - target.x
+          const dy = movement.y - target.y
+          const dz = movement.z - target.z
+          const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+          const hintRadius = 3
+          const proximity = Math.max(0, 1 - dist / hintRadius)
+          const scale = 1 + proximity * 0.6
+
+          const handleTargetClick = event => {
+            event.stopPropagation()
+            if (typeof onSelectProject === 'function') {
+              const proj = PROJECTS[target.projectIndex]
+              if (proj) onSelectProject(proj)
+            }
+          }
+
+          return (
+            <group
+              key={target.id}
+              position={[target.x, target.y, target.z]}
+              rotation={[0, 0.3, 0]}
+              scale={[scale, scale, scale]}
+              onClick={handleTargetClick}
+            >
+              {/* wormhole outer ring */}
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[1.6, 0.15, 24, 64]} />
+                <meshStandardMaterial
+                  color={accent}
+                  emissive={accent}
+                  emissiveIntensity={0.7}
+                  metalness={0.6}
+                  roughness={0.25}
+                />
+              </mesh>
+
+              {/* inner energy ring */}
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <torusGeometry args={[1.0, 0.07, 20, 48]} />
+                <meshStandardMaterial
+                  color="#e5e7eb"
+                  emissive={accent}
+                  emissiveIntensity={1.1}
+                  metalness={0.3}
+                  roughness={0.1}
+                />
+              </mesh>
+
+              {/* central glow disk */}
+              <mesh position={[0, 0, 0.18]}>
+                <circleGeometry args={[0.85, 48]} />
+                <meshStandardMaterial
+                  color={badgeColor}
+                  emissive={accent}
+                  emissiveIntensity={1.4}
+                  transparent
+                  opacity={0.8}
+                  roughness={0.15}
+                />
+              </mesh>
+
+              {/* title hovering above wormhole */}
+              <Text
+                position={[0, 1.35, 0.35]}
+                fontSize={0.3}
+                maxWidth={3}
+                color="#f9fafb"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.03}
+                outlineColor="#020617"
+                strokeColor={accent}
+                strokeWidth={0.012}
+              >
+                {project.title}
+              </Text>
+
+              {/* bomb hanging below wormhole */}
+              <group position={[0, -0.9, 0.05]}>
+                <mesh position={[0, -0.1, 0]}>
+                  <cylinderGeometry args={[0.16, 0.24, 0.5, 16]} />
+                  <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.3} />
+                </mesh>
+
+                <mesh position={[0, 0.2, 0]}>
+                  <coneGeometry args={[0.18, 0.35, 16]} />
+                  <meshStandardMaterial color={accent} metalness={0.85} roughness={0.25} />
+                </mesh>
+
+                <mesh position={[0, 0.45, 0]}>
+                  <sphereGeometry args={[0.07, 12, 12]} />
+                  <meshStandardMaterial emissive={accent} emissiveIntensity={1.2} color={badgeColor} />
+                </mesh>
+              </group>
+            </group>
+          )
+        })}
+      </group>
+
+      <group name="explosions">
+        {explosions.map(explosion => {
+          const life = explosion.ttl / 26
+          const t = 1 - life
+          const baseScale = 0.4 + t * 0.3
+          const opacity = Math.max(0, life)
+
+          return (
+            <group key={explosion.id} position={[explosion.x, explosion.y, explosion.z]}>
+              {SHARD_DIRECTIONS.map(([dx, dy, dz], index) => {
+                const spread = 1.6
+                const px = dx * spread * t
+                const py = dy * spread * t
+                const pz = dz * spread * t
+                const rot = t * Math.PI * (index % 2 === 0 ? 1 : -1)
+
+                return (
+                  <mesh
+                    key={`${explosion.id}-shard-${index}`}
+                    position={[px, py, pz]}
+                    rotation={[rot * 0.6, rot * 0.9, rot * 0.4]}
+                    scale={[baseScale, baseScale * 0.4, baseScale]}
+                  >
+                    <boxGeometry args={[1, 1, 1]} />
+                    <meshStandardMaterial
+                      color="#fee2e2"
+                      emissive="#f97316"
+                      emissiveIntensity={2 * opacity}
+                      transparent
+                      opacity={0.45 * opacity}
+                      roughness={0.45}
+                      metalness={0.2}
+                    />
+                  </mesh>
+                )
+              })}
+            </group>
+          )
+        })}
+      </group>
+
+      <group name="rockets">
+        {rockets.map(rocket => (
+          <group key={rocket.id} position={[rocket.x, rocket.y, rocket.z]} rotation={[0, 0, 0]}>
+            {/* main missile body */}
+            <mesh rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.14, 0.14, 1.5, 20]} />
+              <meshStandardMaterial color="#f9fafb" metalness={0.7} roughness={0.25} />
+            </mesh>
+
+            {/* mid-body stripe */}
+            <mesh position={[0.05, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.15, 0.15, 0.55, 20]} />
+              <meshStandardMaterial color="#f97316" metalness={0.9} roughness={0.25} />
+            </mesh>
+
+            {/* rocket nose */}
+            <mesh position={[0.9, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <coneGeometry args={[0.2, 0.5, 20]} />
+              <meshStandardMaterial color="#991b1b" metalness={0.95} roughness={0.22} />
+            </mesh>
+
+            {/* tail fins */}
+            <group position={[-0.65, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <mesh position={[0, 0.18, 0]}>
+                <boxGeometry args={[0.02, 0.32, 0.18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, -0.18, 0]}>
+                <boxGeometry args={[0.02, 0.32, 0.18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0, 0.18]}>
+                <boxGeometry args={[0.02, 0.32, 0.18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0, -0.18]}>
+                <boxGeometry args={[0.02, 0.32, 0.18]} />
+                <meshStandardMaterial color="#0f172a" metalness={0.6} roughness={0.4} />
+              </mesh>
+            </group>
+
+            {/* exhaust flame + smoke */}
+            <group position={[-0.95, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+              {/* outer flame */}
+              <mesh>
+                <coneGeometry args={[0.32, 0.95, 16]} />
+                <meshStandardMaterial
+                  color="#facc15"
+                  emissive="#f97316"
+                  emissiveIntensity={3.2}
+                  transparent
+                  opacity={0.8}
+                  roughness={0.5}
+                  metalness={0.05}
+                />
+              </mesh>
+
+              {/* inner hot core */}
+              <mesh position={[0.05, 0, 0]}>
+                <coneGeometry args={[0.16, 0.55, 12]} />
+                <meshStandardMaterial
+                  color="#fee2e2"
+                  emissive="#60a5fa"
+                  emissiveIntensity={2.8}
+                  transparent
+                  opacity={0.9}
+                  roughness={0.3}
+                  metalness={0.05}
+                />
+              </mesh>
+
+              {/* smoke puff behind flame */}
+              <mesh position={[-0.3, 0, 0]}>
+                <sphereGeometry args={[0.18, 12, 12]} />
+                <meshStandardMaterial
+                  color="#e5e7eb"
+                  transparent
+                  opacity={0.45}
+                  roughness={0.9}
+                  metalness={0}
+                />
+              </mesh>
+            </group>
+          </group>
+        ))}
+      </group>
 
       <group name="lasers">
         {lasers.map(laser => (
