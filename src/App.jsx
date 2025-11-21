@@ -51,13 +51,15 @@ function BackgroundSound() {
   const thunderSound = useRef(null)
 
   useEffect(() => {
-    // Initialize plane sound from local public/sounds folder
-    planeSound.current = new Audio('/sounds/plane.mp3')
+    const base = (import.meta.env && import.meta.env.BASE_URL) || '/'
+
+    // Initialize plane sound from local public/sounds folder, respecting base
+    planeSound.current = new Audio(`${base}sounds/plane.mp3`)
     planeSound.current.volume = 0.2
     planeSound.current.loop = true
 
     // Initialize thunder sound (lower volume)
-    thunderSound.current = new Audio('/sounds/thunder.mp3')
+    thunderSound.current = new Audio(`${base}sounds/thunder.mp3`)
     thunderSound.current.volume = 0.6
     thunderSound.current.loop = true
 

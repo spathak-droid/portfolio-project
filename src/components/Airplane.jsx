@@ -127,7 +127,8 @@ export default function Airplane({ activeProject, onHintProjectChange, onSelectP
   }, [viewport])
 
   useEffect(() => {
-    rocketSoundRef.current = new Audio('/sounds/rocket.mp3')
+    const base = (import.meta.env && import.meta.env.BASE_URL) || '/'
+    rocketSoundRef.current = new Audio(`${base}sounds/rocket.mp3`)
     rocketSoundRef.current.volume = 0.6
     return () => {
       if (rocketSoundRef.current) {
