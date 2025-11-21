@@ -11,12 +11,13 @@ function ProjectsShowcase({ projects, personalProjects, activeProjectTitle, onBa
     card.focus({ preventScroll: true })
   }, [activeProjectTitle])
 
-  const renderProjectCard = (project, { highlightActive } = {}) => {
+  const renderProjectCard = (project, { highlightActive, variant } = {}) => {
     const isActive = highlightActive && activeProjectTitle === project.title
+    const variantClass = variant ? ` ${variant}` : ''
     return (
       <article
         key={project.title}
-        className={`project-showcase-card${isActive ? ' active' : ''}`}
+        className={`project-showcase-card${variantClass}${isActive ? ' active' : ''}`}
         ref={isActive ? activeCardRef : null}
         tabIndex={isActive ? -1 : undefined}
       >
@@ -38,7 +39,7 @@ function ProjectsShowcase({ projects, personalProjects, activeProjectTitle, onBa
                 >
                   <span>{link.label}</span>
                   <span className="project-link-icon" aria-hidden>
-                    ↗
+                    →
                   </span>
                 </button>
               ))}
@@ -103,7 +104,7 @@ function ProjectsShowcase({ projects, personalProjects, activeProjectTitle, onBa
               <p>Product experiments where I own everything from UX to infrastructure.</p>
             </div>
             <div className="projects-grid">
-              {personalProjects.map(project => renderProjectCard(project))}
+              {personalProjects.map(project => renderProjectCard(project, { variant: 'personal' }))}
             </div>
           </div>
         ) : null}
