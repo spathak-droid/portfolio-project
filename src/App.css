@@ -205,6 +205,7 @@ body {
   min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   background: linear-gradient(135deg, #0c1333 0%, #14255a 60%, #193267 100%);
   user-select: none;
 }
@@ -854,12 +855,11 @@ section {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6rem 5% 4rem;
+  padding: 6rem clamp(1rem, 5vw, 2.5rem) 4rem;
 }
 
 .about-page {
-  width: 100%;
-  max-width: 960px;
+  width: min(100%, 900px);
   margin: 0 auto;
 }
 
@@ -872,6 +872,7 @@ section {
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  width: 100%;
 }
 
 .about-card-header {
@@ -1212,7 +1213,7 @@ section {
 }
 
 .projects-wrapper {
-  width: min(100%, 760px);
+  width: min(100%, 900px);
   margin: 0 auto;
   padding: 0 1rem;
 }
@@ -1472,7 +1473,7 @@ section {
   }
 
   .about-wrapper {
-    padding: 7rem 1.5rem 3rem;
+    padding: 6rem 1.5rem 3rem;
   }
 
   .about-card {
