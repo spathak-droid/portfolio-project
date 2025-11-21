@@ -622,7 +622,7 @@ function App() {
             <span className="hamburger-menu-icon" aria-hidden>
               ✈️
             </span>
-            Flight Simulator
+            Home
           </button>
           <button
             type="button"

@@ -1,10 +1,25 @@
+import { useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 
 function ProjectsShowcase({ projects, personalProjects, activeProjectTitle, onBack }) {
+  const activeCardRef = useRef(null)
+
+  useEffect(() => {
+    if (!activeProjectTitle || !activeCardRef.current) return
+    const card = activeCardRef.current
+    card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+    card.focus({ preventScroll: true })
+  }, [activeProjectTitle])
+
   const renderProjectCard = (project, { highlightActive } = {}) => {
     const isActive = highlightActive && activeProjectTitle === project.title
     return (
-      <article key={project.title} className={`project-showcase-card${isActive ? ' active' : ''}`}>
+      <article
+        key={project.title}
+        className={`project-showcase-card${isActive ? ' active' : ''}`}
+        ref={isActive ? activeCardRef : null}
+        tabIndex={isActive ? -1 : undefined}
+      >
         <header className="project-showcase-header">
           <div>
             <h2>{project.title}</h2>
