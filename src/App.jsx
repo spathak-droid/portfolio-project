@@ -131,6 +131,7 @@ function App() {
   const [sceneReady, setSceneReady] = useState(false)
   const basePath = ((import.meta.env.BASE_URL ?? '/') === '/' ? '' : (import.meta.env.BASE_URL ?? '/').replace(/\/$/, ''))
   const [loadingProgress, setLoadingProgress] = useState(0)
+  const [showSteerHint, setShowSteerHint] = useState(true)
   const warningStorageKey = 'mobileWarningDismissedSession'
 
   const handleSelectProject = project => {
@@ -205,16 +206,32 @@ function App() {
     }
   }, [sceneReady])
 
+  useEffect(() => {
+    setShowSteerHint(isMobileView)
+  }, [isMobileView])
+
   const dispatchMobileControl = (key, pressed) => {
     if (typeof window === 'undefined') return
+    setShowSteerHint(prev => (prev ? false : prev))
     window.dispatchEvent(new CustomEvent('mobile-control', { detail: { key, pressed } }))
+  }
+
+  const handleMobileRestart = () => {
+    if (hits < 3) return
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
   }
 
   const mobileControlHandlers = key => ({
     onPointerDown: () => dispatchMobileControl(key, true),
     onPointerUp: () => dispatchMobileControl(key, false),
     onPointerLeave: () => dispatchMobileControl(key, false),
-    onPointerCancel: () => dispatchMobileControl(key, false)
+    onPointerCancel: () => dispatchMobileControl(key, false),
+    onMouseDown: () => dispatchMobileControl(key, true),
+    onMouseUp: () => dispatchMobileControl(key, false),
+    onTouchStart: () => dispatchMobileControl(key, true),
+    onTouchEnd: () => dispatchMobileControl(key, false)
   })
 
   return (
@@ -622,41 +639,38 @@ function App() {
           <div className="hit-counter-overlay">
             {hits < 3 ? (
               <>Hits: {hits} / 3</>
+            ) : isMobileView ? (
+              <>Tap restart to fly again</>
             ) : (
               <> Press Space to restart</>
             )}
           </div>
           {isMobileView ? (
-            <div className="controls-overlay mobile">
-              <div className="mobile-controls-grid">
-                <div className="mobile-controls-row single">
-                  <button type="button" className="mobile-control-button wide" aria-label="Ascend" {...mobileControlHandlers('ArrowUp')}>
-                    ↑
+            <>
+              <div className="mobile-steer-zone mobile-steer-zone-left" aria-hidden {...mobileControlHandlers('ArrowLeft')} />
+              <div className="mobile-steer-zone mobile-steer-zone-right" aria-hidden {...mobileControlHandlers('ArrowRight')} />
+              <div className="mobile-steer-zone mobile-steer-zone-top" aria-hidden {...mobileControlHandlers('ArrowUp')} />
+              <div className="mobile-steer-zone mobile-steer-zone-bottom" aria-hidden {...mobileControlHandlers('ArrowDown')} />
+              <div className="mobile-circle-controls">
+                {showSteerHint && <div className="mobile-steer-banner">Tap screen edges to steer</div>}
+                <div className="mobile-circle-row">
+                  <button type="button" className="mobile-circle-button" aria-label="Shoot" {...mobileControlHandlers('Space')}>
+                    <span>●</span>
+                    <small>Shoot</small>
                   </button>
-                </div>
-                <div className="mobile-controls-row">
-                  <button type="button" className="mobile-control-button wide" aria-label="Steer left" {...mobileControlHandlers('ArrowLeft')}>
-                    ←
-                  </button>
-                  <button type="button" className="mobile-control-button" aria-label="Shoot" {...mobileControlHandlers('Space')}>
-                    Shoot
-                  </button>
-                  <button type="button" className="mobile-control-button wide" aria-label="Steer right" {...mobileControlHandlers('ArrowRight')}>
-                    →
-                  </button>
-                </div>
-                <div className="mobile-controls-row single">
-                  <button type="button" className="mobile-control-button wide" aria-label="Descend" {...mobileControlHandlers('ArrowDown')}>
-                    ↓
-                  </button>
-                </div>
-                <div className="mobile-controls-row single">
-                  <button type="button" className="mobile-control-button wide" aria-label="Open project" {...mobileControlHandlers('Enter')}>
-                    Open
+                  <button
+                    type="button"
+                    className="mobile-circle-button"
+                    aria-label="Restart"
+                    onClick={handleMobileRestart}
+                    disabled={hits < 3}
+                  >
+                    <span>↻</span>
+                    <small>Restart</small>
                   </button>
                 </div>
               </div>
-            </div>
+            </>
           ) : (
             <div className="controls-overlay">
               <div className="controls-arrows">
